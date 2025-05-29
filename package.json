@@ -1,0 +1,33 @@
+{
+  "name": "cytest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "test": "cypress run --spec \"cypress/e2e/features/**/*.feature\"",
+    "test:headed": "cypress open --spec \"cypress/e2e/features/**/*.feature\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@badeball/cypress-cucumber-preprocessor": "^22.0.1",
+    "@bahmutov/cypress-esbuild-preprocessor": "^2.2.5",
+    "cypress": "^14.4.0",
+    "cypress-cucumber-preprocessor": "^4.3.1",
+    "esbuild": "^0.25.5"
+  },
+  "cypress-cucumber-preprocessor": {
+    "json": {
+      "enabled": true,
+      "output": "./cypress/reports/results.json"
+    },
+    "stepDefinitions": [
+      "cypress/e2e/stepDefinitions/**/*.js",
+      "cypress/e2e/stepDefinitions/common/*.js"
+    ]
+  }
+}
