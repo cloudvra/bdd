@@ -52,5 +52,87 @@ const waitForPort = async (port: number, timeoutMs = 10000): Promise<void> => {
   }
   throw new Error(`Timeout waiting for port ${port}`)
 }
+---------------------
+  3. js
+---------------------
+// cypress.config.js
+const { defineConfig } = require('cypress')
+const { spawn } = require('child_process')
+const net = require('net')
 
-  
+const LOCAL_PORT = 5432
+let tunnelProc = null
+
+// arrow-function version that returns a Promise
+const waitForPort = (port, timeoutMs = 10000) => {
+  const start = Date.now()
+  return new Promise((resolve, reject) => {
+    const tryConnect = () => {
+      const s = net.connect({ port }, () => {
+        s.destroy()
+        resolve()
+      })
+
+      s.on('error', () => {
+        s.destroy()
+        if (Date.now() - start > timeoutMs) {
+          reject(new Error(`Timeout waiting for port ${port}`))
+        } else {
+          setTimeout(tryConnect, 200)
+        }
+      })
+    }
+
+    tryConnect()
+  })
+}
+
+module.exports = defineConfig({
+  e2e: {
+    // put your baseUrl / spec pattern etc here if needed
+    setupNodeEvents(on, config) {
+      // start SSM tunnel before the run
+      on('before:run', async () => {
+        const target = process.env.SSM_TARGET
+        if (!target) {
+          throw new Error('SSM_TARGET environment variable is required')
+        }
+
+        // Spawn the aws ssm start-session command with port forwarding
+        tunnelProc = spawn('aws', [
+          'ssm', 'start-session',
+          '--target', target,
+          '--document-name', 'AWS-StartPortForwardingSession',
+          '--parameters', `localPortNumber=${LOCAL_PORT},remotePortNumber=${LOCAL_PORT}`
+        ], {
+          stdio: 'ignore' // change to 'inherit' while debugging
+        })
+
+        // Optional: listen for spawn error
+        tunnelProc.on('error', (err) => {
+          // if spawn fails, make the whole run fail
+          throw new Error(`Failed to start SSM tunnel: ${err.message}`)
+        })
+
+        // wait for local port to be reachable (or throw)
+        await waitForPort(LOCAL_PORT, 15000)
+        console.log(`SSM tunnel ready on localhost:${LOCAL_PORT}`)
+      })
+
+      // teardown after tests finish
+      on('after:run', () => {
+        if (tunnelProc) {
+          try {
+            tunnelProc.kill()
+          } catch (e) {
+            // ignore
+          }
+          tunnelProc = null
+        }
+      })
+
+      return config
+    }
+  }
+})
+
