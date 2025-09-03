@@ -1,0 +1,56 @@
+1) Direct arrow-function equivalent (keeps the original Promise + inner tryConnect)
+-------------------------------------------------------------------------------------
+import net from 'net'
+
+const waitForPort = (port: number, timeoutMs = 10000): Promise<void> => {
+  const start = Date.now()
+
+  return new Promise((resolve, reject) => {
+    const tryConnect = () => {
+      const s = net.connect({ port }, () => {
+        s.destroy()
+        resolve()
+      })
+
+      s.on('error', () => {
+        s.destroy()
+        if (Date.now() - start > timeoutMs) {
+          reject(new Error(`Timeout waiting for port ${port}`))
+        } else {
+          setTimeout(tryConnect, 200)
+        }
+      })
+    }
+
+    tryConnect()
+  })
+}
+---------------------------------------------------------------------
+2) Async/await style (a bit clearer — polls until port is open)
+  ---------------------------------------------------------------------
+import net from 'net'
+
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+const isPortOpen = (port: number): Promise<boolean> =>
+  new Promise(resolve => {
+    const s = net.connect({ port }, () => {
+      s.destroy()
+      resolve(true)
+    })
+    s.on('error', () => {
+      s.destroy()
+      resolve(false)
+    })
+  })
+
+const waitForPort = async (port: number, timeoutMs = 10000): Promise<void> => {
+  const start = Date.now()
+  while (Date.now() - start <= timeoutMs) {
+    if (await isPortOpen(port)) return
+    await delay(200)
+  }
+  throw new Error(`Timeout waiting for port ${port}`)
+}
+
+  
