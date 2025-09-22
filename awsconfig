@@ -1,0 +1,42 @@
+Example package.json with parameters
+
+{
+  "scripts": {
+    "start-tunnel": "aws ssm start-session --target $SSM_TARGET --document-name AWS-StartPortForwardingSession --parameters '{\"portNumber\":[\"'$REMOTE_PORT'\"], \"localPortNumber\":[\"'$LOCAL_PORT'\" ]}' --region $AWS_REGION &",
+    "start-ssh": "sshpass -p \"$SSH_PASSWORD\" ssh -p $LOCAL_PORT -o StrictHostKeyChecking=no -L $RDS_HOST:$RDS_PORT dev@127.0.0.1 &",
+    "test": "npm run start-tunnel && sleep 5 && npm run start-ssh && sleep 5 && cypress run"
+  }
+}
+
+
+📌 Required environment variables
+
+Before running npm run test, set these variables:
+
+export SSM_TARGET="i-032587rof2wsd34"      # EC2 instance ID
+export AWS_REGION="us-west-2"              # AWS region
+export REMOTE_PORT="26"                    # Remote port on EC2
+export LOCAL_PORT="5555"                   # Local port for forwarding
+export RDS_HOST="12444.gnc.c3sweriasdfgwe.us-west-2.rds.amazon.com" # RDS hostname
+export RDS_PORT="54322"                    # RDS port
+export SSH_PASSWORD="yourPasswordHere"     # SSH password for dev@127.0.0.1
+
+
+▶️ Usage
+npm run test
+
+
+This will:
+
+Start the SSM tunnel with your chosen target/ports/region.
+
+Start the SSH tunnel with sshpass using your env variables.
+
+Run Cypress.
+
+📝 Example with inline variables
+
+You can also run it inline without exporting first:
+
+SSM_TARGET=i-032587rof2wsd34 AWS_REGION=us-west-2 REMOTE_PORT=26 LOCAL_PORT=5555 RDS_HOST=12444.gnc.c3sweriasdfgwe.us-west-2.rds.amazon.com RDS_PORT=54322 SSH_PASSWORD=secret npm run test
+
